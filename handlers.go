@@ -39,6 +39,24 @@ func TodoIndex(w http.ResponseWriter, r *http.Request) {
     }
 }
 
+func TodoMarkDone(w http.ResponseWriter, r *http.Request) {
+    vars := mux.Vars(r)
+    todoId := vars["todoId"]
+
+    res := MarkDone(todoId)
+    if res.Id == -1 {
+        w.WriteHeader(http.StatusInternalServerError)
+    } else {
+        w.WriteHeader(http.StatusOK)
+        w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+
+        if err := json.NewEncoder(w).Encode(res); err != nil {
+            panic(err)
+        }
+
+    }
+}
+
 func TodoDelete(w http.ResponseWriter, r *http.Request) {
     vars:= mux.Vars(r)
     todoId := vars["todoId"]

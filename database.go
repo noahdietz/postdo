@@ -43,6 +43,18 @@ func InsertTodo(todo Todo) (added Todo) {
   }
 }
 
+func MarkDone(id string) (todo Todo) {
+  query := fmt.Sprintf("update %s set completed=true where id=%s returning *;", TABLE_NAME, id)
+  err := db.QueryRow(query).Scan(&todo.Id, &todo.Name, &todo.Completed, &todo.Due)
+
+  if err != nil {
+    todo.Id = -1
+    LogError(err)
+  }
+
+  return todo
+}
+
 func DeleteTodo(id string) (deleted int) {
   query := fmt.Sprintf("delete from %s where id=%s returning id;", TABLE_NAME, id)
   err := db.QueryRow(query).Scan(&deleted)
