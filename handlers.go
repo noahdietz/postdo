@@ -39,6 +39,18 @@ func TodoIndex(w http.ResponseWriter, r *http.Request) {
     }
 }
 
+func TodoDelete(w http.ResponseWriter, r *http.Request) {
+    vars:= mux.Vars(r)
+    todoId := vars["todoId"]
+
+    res := DeleteTodo(todoId)
+    if res == -1 {
+        w.WriteHeader(http.StatusInternalServerError)
+    } else {
+        w.WriteHeader(http.StatusOK)
+    }
+}
+
 func TodoCreate(w http.ResponseWriter, r *http.Request) {
     var todo Todo
     body, err := ioutil.ReadAll(io.LimitReader(r.Body, 1048576))
