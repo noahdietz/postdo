@@ -47,8 +47,8 @@ func TodoMarkDone(w http.ResponseWriter, r *http.Request) {
     if res.Id == -1 {
         w.WriteHeader(http.StatusInternalServerError)
     } else {
-        w.WriteHeader(http.StatusOK)
         w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+        w.WriteHeader(http.StatusOK)
 
         if err := json.NewEncoder(w).Encode(res); err != nil {
             panic(err)
@@ -81,12 +81,21 @@ func TodoCreate(w http.ResponseWriter, r *http.Request) {
     if err := json.Unmarshal(body, &todo); err != nil {
         w.Header().Set("Content-Type", "application/json; charset=UTF-8")
         w.WriteHeader(422) // unprocessable entity
+        LogError(err)
+
         if err := json.NewEncoder(w).Encode(err); err != nil {
             panic(err)
         }
+
+        return
     }
 
     t := InsertTodo(todo)
+    if t.Id == -1 {
+        w.WriteHeader(500)
+        return
+    }
+
     w.Header().Set("Content-Type", "application/json; charset=UTF-8")
     w.WriteHeader(http.StatusCreated)
     if err := json.NewEncoder(w).Encode(t); err != nil {

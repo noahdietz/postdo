@@ -20,7 +20,6 @@ func InitDb() {
 
   dbinfo := fmt.Sprintf("user=%s dbname=%s sslmode=disable", DB_USER, DB_NAME)
   db, err = sql.Open("postgres", dbinfo)
-  // db.Exec(`CREATE TABLE todos (id integer primary key, name text, completed boolean,due time);`)
   checkErr(err)
   fmt.Println("DB connection should be live")
 }
@@ -29,23 +28,26 @@ func InsertTodo(todo Todo) (added Todo) {
   if db == nil {
     err := errors.New("attempted to insert with no DB connection")
     LogError(err)
+
+    todo.Id = -1
     return todo
   } else {
-    var newId int
+    err := db.QueryRow("insert into todos values ($1, $2, $3, $4) returning id;",
+      todo.Id, todo.Name, todo.Completed, todo.Due).Scan(&todo.Id)
+    if err != nil {
+      todo.Id = -1
+      LogError(err)
+    }
 
-    query := fmt.Sprintf("insert into %s values (%d,'%s',%t,'%s') returning id;", TABLE_NAME, todo.Id, todo.Name, todo.Completed, todo.Due)
-
-    err := db.QueryRow(query).Scan(&newId)
-    checkErr(err);
-    fmt.Println("last inserted id: ", newId)
+    fmt.Println("last inserted id: ", todo.Id)
 
     return todo
   }
 }
 
 func MarkDone(id string) (todo Todo) {
-  query := fmt.Sprintf("update %s set completed=true where id=%s returning *;", TABLE_NAME, id)
-  err := db.QueryRow(query).Scan(&todo.Id, &todo.Name, &todo.Completed, &todo.Due)
+  err := db.QueryRow("update todos set completed=true where id = $1 returning *;", id).Scan(
+    &todo.Id, &todo.Name, &todo.Completed, &todo.Due)
 
   if err != nil {
     todo.Id = -1
@@ -56,8 +58,7 @@ func MarkDone(id string) (todo Todo) {
 }
 
 func DeleteTodo(id string) (deleted int) {
-  query := fmt.Sprintf("delete from %s where id=%s returning id;", TABLE_NAME, id)
-  err := db.QueryRow(query).Scan(&deleted)
+  err := db.QueryRow("delete from todos where id = $1 returning id;", id).Scan(&deleted)
   if err != nil {
     LogError(err)
     return -1;
@@ -67,8 +68,7 @@ func DeleteTodo(id string) (deleted int) {
 }
 
 func GetTodo(id string) (todo Todo) {
-  query := fmt.Sprintf("select * from %s where id=%s;", TABLE_NAME, id)
-  err := db.QueryRow(query).Scan(&todo.Id, &todo.Name, &todo.Completed, &todo.Due)
+  err := db.QueryRow("select * from todos where id = $1;", id).Scan(&todo.Id, &todo.Name, &todo.Completed, &todo.Due)
   if err != nil {
     fmt.Println(err)
     todo.Id = -1
@@ -80,8 +80,7 @@ func GetTodo(id string) (todo Todo) {
 func GetAllTodos() (todos Todos) {
   var temp Todo
 
-  query := fmt.Sprintf("select * from %s;", TABLE_NAME)
-  rows, err := db.Query(query)
+  rows, err := db.Query("select * from todos;")
   checkErr(err)
 
   for rows.Next() {
